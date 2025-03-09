@@ -11,6 +11,35 @@ use Illuminate\Support\Facades\DB;
 
 class RaffleController extends Controller
 {
+
+    public function show($identification)
+    {
+        $raffle      = Raffle::where('identification', $identification)->firstOrFail();
+        $numbers     = RaffleNumber::where('raffle_id', $raffle->id)->get();
+        $userNumbers = auth()->check() ? $raffle->numbers()->where('user_id', auth()->id())->pluck('id')->toArray() : [];
+
+        return view('raffles.show', compact('raffle', 'numbers', 'userNumbers'));
+    }
+
+    public function buyNumbers(Request $request)
+    {
+        $request->validate([
+            'numbers'   => 'required|array',
+            'numbers.*' => 'exists:raffle_numbers,id',
+        ]);
+
+        foreach ($request->numbers as $numberId) {
+            $number = RaffleNumber::find($numberId);
+            if ($number->status == 'available') {
+                $number->status  = 'reserved';
+                $number->user_id = Auth::id();
+                $number->save();
+            }
+        }
+
+        return redirect()->back()->with('success', 'Números reservados com sucesso! Complete o pagamento.');
+    }
+
     public function create()
     {
         return view('raffles.create');

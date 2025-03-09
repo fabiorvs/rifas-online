@@ -10,6 +10,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/rifa/{identification}', [RaffleController::class, 'show'])->name('raffle.show');
+Route::post('/rifa/comprar', [RaffleController::class, 'buyNumbers'])->middleware('auth')->name('raffle.buy');
+
+
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
