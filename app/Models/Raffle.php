@@ -14,6 +14,7 @@ class Raffle extends Model
         'description',
         'image',
         'total_numbers',
+        'price_per_number',
         'status',
         'winning_number',
     ];
@@ -22,4 +23,16 @@ class Raffle extends Model
     {
         return $this->hasMany(RaffleNumber::class);
     }
+
+    public function updateStatus()
+    {
+        $totalNumeros       = $this->total_numbers;
+        $numerosConfirmados = $this->numbers()->where('status', 'Confirmado')->count();
+
+        if ($numerosConfirmados === $totalNumeros) {
+            $this->status = 'Aguardando Sorteio';
+            $this->save();
+        }
+    }
+
 }

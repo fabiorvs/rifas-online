@@ -15,7 +15,7 @@ return new class extends Migration
             $table->longText('description')->nullable();                      // Descrição detalhada
             $table->string('image')->nullable();                              // Imagem da rifa
             $table->integer('total_numbers');                                 // Quantidade total de números
-            $table->enum('status', ['Aberta', 'Finalizada', 'Sorteada'])->default('Aberta');
+            $table->enum('status', ['Aberta', 'Finalizada', 'Sorteada', 'Cancelada' , 'Aguardando Sorteio'])->default('Aberta');
             $table->integer('winning_number')->nullable(); // Número vencedor
             $table->timestamps();
         });

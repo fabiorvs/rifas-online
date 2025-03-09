@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'credit_cost_per_raffle' => env('CREDIT_COST_PER_RAFFLE', 1),
+
 ];
