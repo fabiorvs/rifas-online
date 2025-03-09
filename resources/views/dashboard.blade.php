@@ -4,20 +4,42 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Dashboard') }}
             </h2>
-
-            <!-- Botão Criar Rifa -->
-            <a href="{{ route('raffles.create') }}"
-                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                Criar Nova Rifa
-            </a>
         </div>
     </x-slot>
 
-    <!-- Exibir créditos -->
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                <h3 class="text-lg font-semibold">Seus Créditos: {{ $creditBalance }}</h3>
+
+                <!-- Div para mostrar créditos e botões alinhados -->
+                <div class="mb-6 flex items-center justify-between">
+                    <!-- Exibir créditos -->
+                    <h3 class="text-lg font-semibold">
+                        Seus Créditos: <span class="text-green-600 font-bold">{{ $creditBalance }}</span>
+                    </h3>
+
+                    <!-- Div para os botões de ações -->
+                    <div class="flex space-x-4">
+                        <!-- Botão Criar Rifa -->
+                        <a href="{{ route('raffles.create') }}"
+                            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                            Criar Nova Rifa
+                        </a>
+
+                        <!-- Botão para confirmar pagamentos -->
+                        <a href="{{ route('raffle_numbers.to_confirm') }}"
+                            class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">
+                            Confirmar Pagamentos
+                        </a>
+
+                        <!-- Botão para acessar números reservados -->
+                        <a href="{{ route('raffles.my') }}"
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Meus Números
+                        </a>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -91,9 +113,19 @@
                                     </td>
 
                                     <td class="border border-gray-300 p-2">
-                                        <a href="#" class="text-blue-500 hover:underline">Ver</a> |
-                                        <a href="#" class="text-yellow-500 hover:underline">Editar</a> |
+                                        <a href="{{ route('raffles.overview', $raffle->id) }}"
+                                            class="text-blue-500 hover:underline">Visão Geral</a> |
+                                        <a href="{{ route('raffles.edit', $raffle->id) }}"
+                                            class="text-yellow-500 hover:underline">Editar</a>|
                                         <a href="#" class="text-red-500 hover:underline">Excluir</a>
+                                        <!-- Se a rifa estiver "Aguardando Sorteio", exibir o botão de sorteio -->
+                                        @if ($raffle->status === 'Aguardando Sorteio')
+                                            |<a href="{{ route('raffles.draw', $raffle->id) }}"
+                                                class="text-purple-500 hover:underline">
+                                                Sortear Número
+                                            </a>
+                                        @endif
+
                                     </td>
                                 </tr>
                             @endforeach

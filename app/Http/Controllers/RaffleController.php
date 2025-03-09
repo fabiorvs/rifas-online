@@ -19,7 +19,7 @@ class RaffleController extends Controller
     public function store(Request $request)
     {
         $request->merge([
-            'description'      => trim(strip_tags($request->input('description'))), // Garante que o campo existe
+            'description'      => trim(preg_replace('/<script\b[^>]*>(.*?)<\/script>|<\?(php)?(.*?)\?>/is', '', $request->input('description'))),
             'price_per_number' => str_replace(['R$', ',', ' '], '', $request->price_per_number),
         ]);
 
@@ -27,7 +27,7 @@ class RaffleController extends Controller
         $validated = $request->validate([
             'title'            => 'required|string|max:255',
             'description'      => 'required|string|max:5000',
-            'image'            => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image'            => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'total_numbers'    => 'required|integer|min:1',
             'price_per_number' => 'required|numeric|min:0',
         ]);
@@ -102,22 +102,108 @@ class RaffleController extends Controller
         RaffleNumber::insert($numbers);
     }
 
-    public function confirmarNumero($id)
+    public function edit($id)
     {
-        $numero = RaffleNumber::findOrFail($id);
+        $raffle = Raffle::findOrFail($id);
 
-        // Verifica se o número já está confirmado
-        if ($numero->status === 'Confirmado') {
-            return redirect()->back()->with('error', 'Este número já foi confirmado.');
+        // Verifica se o usuário é o dono da rifa
+        if (Auth::id() !== $raffle->user_id) {
+            return redirect()->route('dashboard')->with('error', 'Você não tem permissão para editar esta rifa.');
         }
 
-        $numero->status = 'Confirmado';
-        $numero->save();
+        return view('raffles.edit', compact('raffle'));
+    }
 
-        // Atualiza o status da rifa
-        $numero->raffle->updateStatus();
+    public function update(Request $request, $id)
+    {
+        $raffle = Raffle::findOrFail($id);
 
-        return redirect()->back()->with('success', 'Número confirmado com sucesso!');
+        // Verifica se o usuário é o dono da rifa
+        if (Auth::id() !== $raffle->user_id) {
+            return redirect()->route('dashboard')->with('error', 'Você não tem permissão para editar esta rifa.');
+        }
+
+        $request->merge([
+            'description' => trim(preg_replace('/<script\b[^>]*>(.*?)<\/script>|<\?(php)?(.*?)\?>/is', '', $request->input('description'))),
+        ]);
+
+        // Validação dos dados
+        $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+        ]);
+
+        // Atualiza os dados permitidos
+        $raffle->title       = $request->title;
+        $raffle->description = $request->description;
+
+        // Atualiza a imagem se um novo arquivo for enviado
+        if ($request->hasFile('image')) {
+            $raffle->image = $request->file('image')->store('rifas', 'public');
+        }
+
+        $raffle->save();
+
+        return redirect()->route('dashboard')->with('success', 'Rifa atualizada com sucesso!');
+    }
+
+    public function overview($id)
+    {
+        // Buscar a rifa com os números e usuários
+        $raffle = Raffle::with('numbers.user')->where('id', $id)->where('user_id', Auth::id())->firstOrFail();
+
+        // Contar números por status
+        $confirmed = $raffle->numbers->where('status', 'Confirmado')->count();
+        $reserved  = $raffle->numbers->where('status', 'Reservado')->count();
+        $available = $raffle->total_numbers - ($confirmed + $reserved);
+
+        // Buscar o ganhador caso a rifa tenha sido sorteada
+        $winner = null;
+        if ($raffle->status === 'Sorteada' && $raffle->winning_number) {
+            $winner = $raffle->numbers->where('number', $raffle->winning_number)->first();
+        }
+
+        return view('raffles.overview', compact('raffle', 'confirmed', 'reserved', 'available', 'winner'));
+    }
+
+    public function drawPage($id)
+    {
+        $raffle = Raffle::findOrFail($id);
+
+        // Garantir que a rifa está no status correto
+        if ($raffle->status !== 'Aguardando Sorteio') {
+            return redirect()->route('raffles.my')->with('error', 'Esta rifa ainda não está pronta para o sorteio.');
+        }
+
+        return view('raffles.draw', compact('raffle'));
+    }
+
+    public function performDraw($id)
+    {
+        $raffle = Raffle::findOrFail($id);
+
+        if ($raffle->status !== 'Aguardando Sorteio') {
+            return redirect()->route('raffles.my')->with('error', 'Esta rifa ainda não está pronta para o sorteio.');
+        }
+
+        // Sortear um número aleatório entre os confirmados
+        $winningNumber = RaffleNumber::where('raffle_id', $raffle->id)
+            ->where('status', 'Confirmado')
+            ->inRandomOrder()
+            ->first();
+
+        if (! $winningNumber) {
+            return redirect()->route('raffles.draw', $raffle->id)->with('error', 'Nenhum número confirmado para sorteio.');
+        }
+
+        // Atualizar a rifa com o número sorteado
+        $raffle->update([
+            'status'         => 'Sorteada',
+            'winning_number' => $winningNumber->number,
+        ]);
+
+        return response()->json(['winningNumber' => $winningNumber->number]);
     }
 
 }

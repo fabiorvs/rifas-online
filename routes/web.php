@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RaffleController;
+use App\Http\Controllers\RaffleNumberController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -20,12 +21,22 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/rifas/create', [RaffleController::class, 'create'])->name('rifas.create');
+    Route::get('/raffles/create', [RaffleController::class, 'create'])->name('raffles.create');
+    Route::post('/raffles', [RaffleController::class, 'store'])->name('raffles.store');
+    Route::get('/raffles/{id}/edit', [RaffleController::class, 'edit'])->name('raffles.edit');
+    Route::put('/raffles/{id}', [RaffleController::class, 'update'])->name('raffles.update');
+    Route::get('/raffles/{id}/overview', [RaffleController::class, 'overview'])->name('raffles.overview');
+    Route::get('/raffles/numbers', [RaffleNumberController::class, 'numerosConfirmar'])->name('raffle_numbers.to_confirm');
+    Route::post('/raffles/confirm-payment', [RaffleNumberController::class, 'confirmarPagamento'])->name('raffle_numbers.confirm_payment');
+    Route::post('/raffles/cancel-reservation/{id}', [RaffleNumberController::class, 'cancelarReserva'])->name('raffle_numbers.cancel');
+    Route::get('/raffles/{id}/draw', [RaffleController::class, 'drawPage'])->name('raffles.draw');
+    Route::post('/raffles/{id}/draw', [RaffleController::class, 'performDraw'])->name('raffles.performDraw');
+
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/raffles/create', [RaffleController::class, 'create'])->name('raffles.create');
-    Route::post('/raffles', [RaffleController::class, 'store'])->name('raffles.store');
+    Route::get('/my-raffles', [RaffleNumberController::class, 'myRaffles'])->name('raffles.my');
+    Route::get('/my-raffles/{id}', [RaffleNumberController::class, 'myNumbers'])->name('raffles.my_numbers');
 });
 
 require __DIR__ . '/auth.php';
