@@ -18,9 +18,11 @@ class RaffleController extends Controller
 
     public function store(Request $request)
     {
+        $price = str_replace(['R$', '.', ','], ['', '', '.'], $request->price_per_number);
+        $price = floatval($price);
         $request->merge([
             'description'      => trim(preg_replace('/<script\b[^>]*>(.*?)<\/script>|<\?(php)?(.*?)\?>/is', '', $request->input('description'))),
-            'price_per_number' => str_replace(['R$', ',', ' '], '', $request->price_per_number),
+            'price_per_number' => $price,
         ]);
 
         // Validação dos dados
