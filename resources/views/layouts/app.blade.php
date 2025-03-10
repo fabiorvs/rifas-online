@@ -17,9 +17,6 @@
 
     <script src="https://cdn.tiny.cloud/1/l65z99kfznruhzztxw8gb3bq92ny2qlyz08jxx4f1f6h5kz7/tinymce/7/tinymce.min.js"
         referrerpolicy="origin"></script>
-
-    @livewireStyles
-
 </head>
 
 <body class="font-sans antialiased bg-gray-100">
