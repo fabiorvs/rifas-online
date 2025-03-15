@@ -12,7 +12,7 @@ Route::get('/', function () {
 
 Route::get('/rifa/{identification}', [RaffleController::class, 'show'])->name('raffle.show');
 Route::post('/rifa/comprar', [RaffleController::class, 'buyNumbers'])->middleware('auth')->name('raffle.buy');
-
+Route::get('/rifa/checkout/{transactionCode}', [RaffleController::class, 'checkout'])->name('raffle.checkout');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
@@ -32,7 +32,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/raffles/{id}/overview', [RaffleController::class, 'overview'])->name('raffles.overview');
     Route::get('/raffles/numbers', [RaffleNumberController::class, 'numerosConfirmar'])->name('raffle_numbers.to_confirm');
     Route::post('/raffles/confirm-payment', [RaffleNumberController::class, 'confirmarPagamento'])->name('raffle_numbers.confirm_payment');
-    Route::post('/raffles/cancel-reservation/{id}', [RaffleNumberController::class, 'cancelarReserva'])->name('raffle_numbers.cancel');
+    Route::post('/raffles/cancel-reservations', [RaffleNumberController::class, 'cancelarReservas'])
+        ->name('raffle_numbers.cancel');
     Route::get('/raffles/{id}/draw', [RaffleController::class, 'drawPage'])->name('raffles.draw');
     Route::post('/raffles/{id}/draw', [RaffleController::class, 'performDraw'])->name('raffles.performDraw');
 

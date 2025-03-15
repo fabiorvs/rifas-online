@@ -11,7 +11,7 @@
                 @if ($raffleNumbers->isEmpty())
                     <p class="text-gray-600">Nenhum número aguardando confirmação de pagamento.</p>
                 @else
-                    <form action="{{ route('raffle_numbers.confirm_payment') }}" method="POST">
+                    <form id="raffle-form" action="{{ route('raffle_numbers.confirm_payment') }}" method="POST">
                         @csrf
                         <table class="w-full border-collapse border border-gray-300">
                             <thead>
@@ -22,8 +22,7 @@
                                     <th class="border border-gray-300 p-2">Comprador</th>
                                     <th class="border border-gray-300 p-2">E-mail</th>
                                     <th class="border border-gray-300 p-2">Data Reserva</th>
-                                    <th class="border border-gray-300 p-2 text-center">Confirmar Pagamento</th>
-                                    <th class="border border-gray-300 p-2 text-center">Cancelar Reserva</th>
+                                    <th class="border border-gray-300 p-2 text-center">Selecionar</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -44,32 +43,95 @@
                                         <td class="border border-gray-300 p-2">
                                             {{ $number->updated_at->format('d/m/Y H:i') }}</td>
                                         <td class="border border-gray-300 p-2 text-center">
-                                            <input type="checkbox" name="numbers[]" value="{{ $number->id }}">
-                                        </td>
-                                        <td class="border border-gray-300 p-2 text-center">
-                                            <form action="{{ route('raffle_numbers.cancel', $number->id) }}"
-                                                method="POST"
-                                                onsubmit="return confirm('Tem certeza que deseja cancelar esta reserva?');">
-                                                @csrf
-                                                <button type="submit"
-                                                    class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded">
-                                                    Cancelar Reserva
-                                                </button>
-                                            </form>
+                                            <input type="checkbox" class="number-checkbox" name="numbers[]"
+                                                value="{{ $number->id }}">
                                         </td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
 
-                        <button type="submit"
-                            class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Confirmar Pagamento
-                        </button>
+                        <div class="flex space-x-4 mt-4">
+                            <!-- Botão para Selecionar Todos -->
+                            <button type="button" id="select-all-btn"
+                                class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                Selecionar Todos
+                            </button>
+
+                            <!-- Botão para Confirmar Selecionados -->
+                            <button type="submit"
+                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                Confirmar Selecionados
+                            </button>
+
+                            <!-- Botão para Cancelar Selecionados -->
+                            <button type="button" id="cancel-selected"
+                                class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded">
+                                Cancelar Selecionados
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Formulário de cancelamento -->
+                    <form id="cancel-form" action="{{ route('raffle_numbers.cancel') }}" method="POST">
+                        @csrf
+                        <div id="cancel-numbers-container"></div>
                     </form>
                 @endif
-
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const selectAllBtn = document.getElementById("select-all-btn");
+            const checkboxes = document.querySelectorAll(".number-checkbox");
+            const cancelButton = document.getElementById("cancel-selected");
+            const cancelForm = document.getElementById("cancel-form");
+            const cancelNumbersContainer = document.getElementById("cancel-numbers-container");
+
+            let allSelected = false; // Variável para rastrear se todos estão selecionados
+
+            // Selecionar/deselecionar todos os checkboxes
+            selectAllBtn.addEventListener("click", function() {
+                allSelected = !allSelected; // Alternar estado
+
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = allSelected;
+                });
+
+                // Atualiza o texto do botão
+                selectAllBtn.innerText = allSelected ? "Desselecionar Todos" : "Selecionar Todos";
+            });
+
+            // Cancelar números selecionados
+            cancelButton.addEventListener("click", function() {
+                const selectedNumbers = Array.from(checkboxes)
+                    .filter(checkbox => checkbox.checked)
+                    .map(checkbox => checkbox.value);
+
+                if (selectedNumbers.length === 0) {
+                    alert("Selecione pelo menos um número para cancelar.");
+                    return;
+                }
+
+                if (!confirm("Tem certeza que deseja cancelar os números selecionados?")) {
+                    return;
+                }
+
+                // Adiciona inputs hidden com os números selecionados ao formulário
+                cancelNumbersContainer.innerHTML = "";
+                selectedNumbers.forEach(number => {
+                    let input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "numbers[]";
+                    input.value = number;
+                    cancelNumbersContainer.appendChild(input);
+                });
+
+                // Submete o formulário
+                cancelForm.submit();
+            });
+        });
+    </script>
 </x-app-layout>

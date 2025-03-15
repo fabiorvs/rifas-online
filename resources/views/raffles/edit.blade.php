@@ -25,6 +25,12 @@
                         <p class="text-red-500 text-sm">{{ $message }}</p>
                     @enderror
 
+                    <label class="block text-gray-700">Detalhes do Pagamento</label>
+                    <textarea id="payment_details" name="payment_details" class="w-full border p-2 rounded mb-4">{{ old('payment_details', $raffle->payment_details) }}</textarea>
+                    @error('payment_details')
+                        <p class="text-red-500 text-sm">{{ $message }}</p>
+                    @enderror
+
                     <label class="block text-gray-700">Imagem</label>
                     <input type="file" name="image" class="w-full border p-2 rounded mb-4">
 
@@ -50,9 +56,117 @@
                 tinymce.init({
                     selector: '#description',
                     height: 300,
-                    menubar: false,
+                    menubar: true, // Ativa o menu superior
                     plugins: 'advlist autolink lists link charmap print preview anchor',
-                    toolbar: 'undo redo | bold italic underline | bullist numlist outdent indent | removeformat'
+                    toolbar: 'undo redo | formatselect | bold italic underline | bullist numlist outdent indent | removeformat',
+                    skin: 'oxide-dark', // Modo escuro para o editor
+                    content_css: '/css/tinymce-style.css', // Estilos externos
+
+                    // Adiciona os estilos personalizados de cabeçalhos
+                    style_formats: [{
+                            title: 'Título H1',
+                            format: 'h1'
+                        },
+                        {
+                            title: 'Título H2',
+                            format: 'h2'
+                        },
+                        {
+                            title: 'Título H3',
+                            format: 'h3'
+                        },
+                        {
+                            title: 'Parágrafo',
+                            format: 'p'
+                        },
+                        {
+                            title: 'Citação',
+                            format: 'blockquote'
+                        },
+                    ],
+
+                    // Garante que os estilos sejam aplicados
+                    formats: {
+                        h1: {
+                            block: 'h1',
+                            classes: 'h1-custom'
+                        },
+                        h2: {
+                            block: 'h2',
+                            classes: 'h2-custom'
+                        },
+                        h3: {
+                            block: 'h3',
+                            classes: 'h3-custom'
+                        },
+                        p: {
+                            block: 'p',
+                            classes: 'p-custom'
+                        },
+                        blockquote: {
+                            block: 'blockquote',
+                            classes: 'blockquote-custom'
+                        }
+                    }
+                });
+            });
+
+            document.addEventListener("DOMContentLoaded", function() {
+                tinymce.init({
+                    selector: '#payment_details',
+                    height: 300,
+                    menubar: true, // Ativa o menu superior
+                    plugins: 'advlist autolink lists link charmap print preview anchor',
+                    toolbar: 'undo redo | formatselect | bold italic underline | bullist numlist outdent indent | removeformat',
+                    skin: 'oxide-dark', // Modo escuro para o editor
+                    content_css: '/css/tinymce-style.css', // Estilos externos
+
+                    // Adiciona os estilos personalizados de cabeçalhos
+                    style_formats: [{
+                            title: 'Título H1',
+                            format: 'h1'
+                        },
+                        {
+                            title: 'Título H2',
+                            format: 'h2'
+                        },
+                        {
+                            title: 'Título H3',
+                            format: 'h3'
+                        },
+                        {
+                            title: 'Parágrafo',
+                            format: 'p'
+                        },
+                        {
+                            title: 'Citação',
+                            format: 'blockquote'
+                        },
+                    ],
+
+                    // Garante que os estilos sejam aplicados
+                    formats: {
+                        h1: {
+                            block: 'h1',
+                            classes: 'h1-custom'
+                        },
+                        h2: {
+                            block: 'h2',
+                            classes: 'h2-custom'
+                        },
+                        h3: {
+                            block: 'h3',
+                            classes: 'h3-custom'
+                        },
+                        p: {
+                            block: 'p',
+                            classes: 'p-custom'
+                        },
+                        blockquote: {
+                            block: 'blockquote',
+                            classes: 'blockquote-custom'
+                        }
+                    }
                 });
             });
         </script>

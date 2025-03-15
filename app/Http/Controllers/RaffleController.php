@@ -8,36 +8,93 @@ use App\Models\RaffleNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class RaffleController extends Controller
 {
 
     public function show($identification)
     {
+        // Buscar a rifa pelo identificador único
         $raffle      = Raffle::where('identification', $identification)->firstOrFail();
         $numbers     = RaffleNumber::where('raffle_id', $raffle->id)->get();
-        $userNumbers = auth()->check() ? $raffle->numbers()->where('user_id', auth()->id())->pluck('id')->toArray() : [];
+        $userNumbers = auth()->check() ?
+        $raffle->numbers()->where('user_id', auth()->id())->pluck('id')->toArray() : [];
 
-        return view('raffles.show', compact('raffle', 'numbers', 'userNumbers'));
+        // Buscar diretamente o número sorteado caso a rifa esteja no status "sorteada"
+        $winnerNumber = null;
+        if ($raffle->status === 'Sorteada' && ! empty($raffle->winning_number)) {
+            $winnerNumber = RaffleNumber::where('raffle_id', $raffle->id)
+                ->where('number', $raffle->winning_number)
+                ->first();
+        }
+
+        return view('raffles.show', compact('raffle', 'numbers', 'userNumbers', 'winnerNumber'));
     }
 
     public function buyNumbers(Request $request)
     {
+        // Converter JSON para array corretamente
+        $selectedNumbers = json_decode($request->selected_numbers, true);
+
+        if (empty($selectedNumbers) || ! is_array($selectedNumbers)) {
+            return redirect()->back()->with('error', 'Nenhum número foi selecionado.');
+        }
+
         $request->validate([
-            'numbers'   => 'required|array',
-            'numbers.*' => 'exists:raffle_numbers,id',
+            'selected_numbers.*' => 'exists:raffle_numbers,id',
         ]);
 
-        foreach ($request->numbers as $numberId) {
-            $number = RaffleNumber::find($numberId);
-            if ($number->status == 'available') {
-                $number->status  = 'reserved';
-                $number->user_id = Auth::id();
+        $reservedNumbers = [];
+        $totalPrice      = 0;
+        $transactionCode = Str::uuid();
+
+        foreach ($selectedNumbers as $numberId) {
+            // Buscar o número e garantir que ainda está disponível
+            $number = RaffleNumber::where('id', $numberId)
+                ->where('status', 'Disponível')
+                ->first();
+
+            if ($number) {
+                $number->status           = 'Reservado';
+                $number->user_id          = Auth::id();
+                $number->uuid             = Str::uuid();
+                $number->transaction_code = $transactionCode;
                 $number->save();
+
+                $reservedNumbers[] = $number;
+                $totalPrice += $number->raffle->price;
             }
         }
 
-        return redirect()->back()->with('success', 'Números reservados com sucesso! Complete o pagamento.');
+        if (empty($reservedNumbers)) {
+            return redirect()->back()->with('error', 'Os números selecionados já foram reservados.');
+        }
+
+        // Redirecionar para o checkout passando a transação e o total da compra
+        return redirect()->route('raffle.checkout', ['transactionCode' => $transactionCode]);
+    }
+
+    public function checkout($transactionCode)
+    {
+        // Buscar os números reservados pelo código de transação
+        $reservedNumbers = RaffleNumber::where('transaction_code', $transactionCode)
+            ->where('user_id', Auth::id())
+            ->where('status', 'Reservado')
+            ->get();
+
+        if ($reservedNumbers->isEmpty()) {
+            return redirect()->route('raffle.show', $reservedNumbers->first()->raffle_id ?? 1)
+                ->with('error', 'Nenhum número reservado foi encontrado para esta compra.');
+        }
+
+        // Obter os detalhes da rifa a partir dos números reservados
+        $raffle = $reservedNumbers->first()->raffle;
+
+        // Calcular o total baseado na quantidade de números reservados e no preço por número
+        $totalPrice = count($reservedNumbers) * $raffle->price_per_number;
+
+        return view('raffles.checkout', compact('raffle', 'reservedNumbers', 'totalPrice', 'transactionCode'));
     }
 
     public function create()
@@ -58,6 +115,7 @@ class RaffleController extends Controller
         $validated = $request->validate([
             'title'            => 'required|string|max:255',
             'description'      => 'required|string|max:5000',
+            'payment_details'  => 'required|string|max:5000',
             'image'            => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'total_numbers'    => 'required|integer|min:1',
             'price_per_number' => 'required|numeric|min:0',
@@ -88,6 +146,7 @@ class RaffleController extends Controller
                 'user_id'          => $user->id,
                 'title'            => $validated['title'],
                 'description'      => $validated['description'],
+                'payment_details'  => $validated['payment_details'],
                 'image'            => $imagePath,
                 'total_numbers'    => $validated['total_numbers'],
                 'price_per_number' => $validated['price_per_number'],
@@ -160,14 +219,16 @@ class RaffleController extends Controller
 
         // Validação dos dados
         $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string|max:5000',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'title'           => 'required|string|max:255',
+            'description'     => 'nullable|string|max:5000',
+            'payment_details' => 'nullable|string|max:5000',
+            'image'           => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
         // Atualiza os dados permitidos
-        $raffle->title       = $request->title;
-        $raffle->description = $request->description;
+        $raffle->title           = $request->title;
+        $raffle->description     = $request->description;
+        $raffle->payment_details = $request->payment_details;
 
         // Atualiza a imagem se um novo arquivo for enviado
         if ($request->hasFile('image')) {

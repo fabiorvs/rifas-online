@@ -13,6 +13,7 @@ class RaffleNumber extends Model
         'user_id',
         'number',
         'status',
+        'transaction_code',
     ];
 
     public function raffle()
@@ -23,5 +24,15 @@ class RaffleNumber extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($number) {
+            if (empty($number->uuid)) {
+                $number->uuid = Str::uuid();
+            }
+        });
     }
 }

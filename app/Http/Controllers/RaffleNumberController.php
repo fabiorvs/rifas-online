@@ -5,6 +5,7 @@ use App\Models\Raffle;
 use App\Models\RaffleNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class RaffleNumberController extends Controller
 {
@@ -63,23 +64,42 @@ class RaffleNumberController extends Controller
         return redirect()->route('raffle_numbers.to_confirm')->with('success', 'Pagamentos confirmados com sucesso!');
     }
 
-    public function cancelarReserva($id)
+    public function cancelarReservas(Request $request)
     {
-        // Buscar o número
-        $raffleNumber = RaffleNumber::findOrFail($id);
-
-        // Verifica se o número pertence a uma rifa criada pelo usuário logado
-        if ($raffleNumber->raffle->user_id !== Auth::id()) {
-            return redirect()->back()->with('error', 'Você não tem permissão para cancelar esta reserva.');
-        }
-
-        // Atualiza o status e remove o user_id
-        $raffleNumber->update([
-            'status'  => 'Disponível',
-            'user_id' => null,
+        $request->validate([
+            'numbers'   => 'required|array',
+            'numbers.*' => 'exists:raffle_numbers,id',
         ]);
 
-        return redirect()->route('raffle_numbers.to_confirm')->with('success', 'Reserva cancelada e número liberado.');
+        // Buscar os números selecionados
+        $raffleNumbers = RaffleNumber::whereIn('id', $request->numbers)->get();
+
+        // Verifica se todos os números pertencem a rifas do usuário logado
+        foreach ($raffleNumbers as $raffleNumber) {
+            if ($raffleNumber->raffle->user_id !== Auth::id()) {
+                return redirect()->back()->with('error', 'Você não tem permissão para cancelar uma ou mais reservas.');
+            }
+
+            // Impede o cancelamento de números já confirmados
+            if ($raffleNumber->status === 'Confirmado') {
+                return redirect()->back()->with('error', 'Um ou mais números já foram confirmados e não podem ser cancelados.');
+            }
+        }
+
+        // Executa a atualização dentro de uma transação
+        DB::transaction(function () use ($raffleNumbers) {
+            foreach ($raffleNumbers as $raffleNumber) {
+                $raffleNumber->update([
+                    'status'           => 'Disponível',
+                    'user_id'          => null,
+                    'transaction_code' => null, // Remove o código da transação
+                    'uuid'             => null, // Remove o UUID para nova atribuição no futuro
+                ]);
+            }
+        });
+
+        return redirect()->route('raffle_numbers.to_confirm')
+            ->with('success', 'Reservas canceladas e números liberados.');
     }
 
     public function myRaffles()

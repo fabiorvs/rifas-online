@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -14,8 +13,13 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        // Se houver um redirecionamento na URL, salva na sessão para usar após o login
+        if ($request->has('redirect')) {
+            $request->session()->put('url.intended', $request->query('redirect'));
+        }
+
         return view('auth.login');
     }
 
@@ -25,10 +29,12 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Verifica se há uma URL de redirecionamento na sessão ou na query string
+        $redirectUrl = $request->session()->pull('url.intended', route('dashboard'));
+
+        return redirect()->to($redirectUrl);
     }
 
     /**

@@ -17,8 +17,9 @@ class Raffle extends Model
         'total_numbers',
         'price_per_number',
         'status',
+        'payment_details',
         'winning_number',
-        'identification', // 🔹 Adicionei para garantir que pode ser preenchido
+        'identification',
     ];
 
     protected static function boot()
